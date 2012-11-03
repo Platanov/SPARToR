@@ -10,18 +10,15 @@
  **  http://github.com/superjer/SPARToR
  **/
 
-
 #include "mod.h"
 #include "saveload.h"
 #include "sjglob.h"
 #include "sprite.h"
 #include "sprite_helpers.h"
+#include "video_helpers.h"
 #include "command.h"
 #include "keynames.h"
-
-
-int m_showdepth = 0; // whether to show the depth buffer values of drawn sprites
-
+#include "helpers.h"
 
 SYS_TEX_T sys_tex[] = {{"/tool.png"       ,0},
                        {"/player.png"     ,0},
@@ -31,28 +28,27 @@ SYS_TEX_T sys_tex[] = {{"/tool.png"       ,0},
                        {"/blankhud.png"   ,0}};
 size_t num_sys_tex = COUNTOF(sys_tex);
 
-
-INPUTNAME_t inputnames[] = {{"left"       ,CMDT_1LEFT ,CMDT_0LEFT },
-                            {"right"      ,CMDT_1RIGHT,CMDT_0RIGHT},
-                            {"up"         ,CMDT_1UP   ,CMDT_0UP   },
-                            {"down"       ,CMDT_1DOWN ,CMDT_0DOWN },
-                            {"fire"       ,CMDT_1FIRE ,CMDT_0FIRE },
-                            {"jump"       ,CMDT_1JUMP ,CMDT_0JUMP },
-                         /* {"cons-cmd"   ,CMDT_1CON  ,CMDT_0CON  }, this may not be necessary, it may even be dangerous */
-                            {"edit-paint" ,CMDT_1EPANT,CMDT_0EPANT},
-                            {"edit-prev"  ,CMDT_1EPREV,CMDT_0EPREV},
-                            {"edit-next"  ,CMDT_1ENEXT,CMDT_0ENEXT},
-                            {"edit-texup" ,CMDT_1EPGUP,CMDT_0EPGUP},
-                            {"edit-texdn" ,CMDT_1EPGDN,CMDT_0EPGDN},
-                            {"edit-lay0"  ,CMDT_1ELAY0,CMDT_0ELAY0},
-                            {"edit-lay1"  ,CMDT_1ELAY1,CMDT_0ELAY1},
-                            {"edit-lay2"  ,CMDT_1ELAY2,CMDT_0ELAY2},
-                            {"edit-undo"  ,CMDT_1EUNDO,CMDT_0EUNDO}};
+INPUTNAME_t inputnames[] = {{"left"       ,CMDT_1LEFT    ,CMDT_0LEFT    },
+                            {"right"      ,CMDT_1RIGHT   ,CMDT_0RIGHT   },
+                            {"up"         ,CMDT_1UP      ,CMDT_0UP      },
+                            {"down"       ,CMDT_1DOWN    ,CMDT_0DOWN    },
+                            {"fire"       ,CMDT_1FIRE    ,CMDT_0FIRE    },
+                            {"jump"       ,CMDT_1JUMP    ,CMDT_0JUMP    },
+                         /* {"cons-cmd"   ,CMDT_1CON     ,CMDT_0CON     }, this may not be necessary, it may even be dangerous */
+                            {"edit-paint" ,CMDT_1EPANT   ,CMDT_0EPANT   },
+                            {"edit-prev"  ,CMDT_1EPREV   ,CMDT_0EPREV   },
+                            {"edit-next"  ,CMDT_1ENEXT   ,CMDT_0ENEXT   },
+                            {"edit-texup" ,CMDT_1EPGUP   ,CMDT_0EPGUP   },
+                            {"edit-texdn" ,CMDT_1EPGDN   ,CMDT_0EPGDN   },
+                            {"edit-lay0"  ,CMDT_1ELAY0   ,CMDT_0ELAY0   },
+                            {"edit-lay1"  ,CMDT_1ELAY1   ,CMDT_0ELAY1   },
+                            {"edit-lay2"  ,CMDT_1ELAY2   ,CMDT_0ELAY2   },
+                            {"edit-undo"  ,CMDT_1EUNDO   ,CMDT_0EUNDO   }};
 int numinputnames = COUNTOF(inputnames);
-
 
 int    myghost;     //obj number of local player ghost
 int    mycontext;
+
 int    downx = -1; //position of mousedown at beginning of edit cmd
 int    downy = -1;
 int    downz = -1;
@@ -63,24 +59,23 @@ int    setmodel; //FIXME REMOVE! change local player model
 CB    *hack_map; //FIXME remove hack_map and _dmap someday
 CB    *hack_dmap;
 
-
 static int    binds_size = 0;
 static struct {
   unsigned short sym;
-  unsigned char device;
-  unsigned char press;
+  unsigned char  device;
+  unsigned char  press;
   unsigned char  cmd;
+  char          *script;
 }            *binds;
 static int    editmode = 0;
 static int    myspr    = 0;
 static int    mytex    = 0;
 static FCMD_t magic_c;      // magical storage for an extra command, triggered from console
 
-
+// prototypes
 static void screen_unproject( int screenx, int screeny, int height, int *x, int *y, int *z );
 static void draw_sprite_on_tile( SPRITE_T *spr, CONTEXT_t *co, int x, int y, int z );
 static int sprite_at(int texnum, int x, int y);
-
 
 void mod_setup(Uint32 setupfr)
 {
@@ -92,7 +87,7 @@ void mod_setup(Uint32 setupfr)
   memset( fr[setupfr].objs[0].data, 0, sizeof(MOTHER_t) );
 
   //make default context object (map)
-  fr[setupfr].objs[1] = (OBJ_t){ OBJT_CONTEXT, 0, 0, sizeof(CONTEXT_t), malloc(sizeof(CONTEXT_t)) };
+  fr[setupfr].objs[1] = (OBJ_t){ OBJT_CONTEXT, OBJF_REFC, 0, sizeof(CONTEXT_t), malloc(sizeof(CONTEXT_t)) };
   CONTEXT_t *co = fr[setupfr].objs[1].data;
   co->bsx = co->bsy = co->bsz = 16;
   co->x   = co->y   = co->z   = 15;
@@ -143,7 +138,6 @@ void mod_setup(Uint32 setupfr)
   SJC_Write("Default controls: \\#F80A, S, Numpad Arrows, F11");
 }
 
-
 void mod_recvobj(OBJ_t *o)
 {
   CONTEXT_t *co;
@@ -158,28 +152,26 @@ void mod_recvobj(OBJ_t *o)
   }
 }
 
-
 void mod_setvideo(int w,int h)
 {
   mod_loadsurfs(0);
 }
-
 
 void mod_quit()
 {
   mod_loadsurfs(1);
 }
 
-
 void mod_showbinds()
 {
   int i,j;
 
   for(i=0; i<binds_size; i++) {
-    if( !binds[i].cmd )
+    if( !binds[i].cmd && !binds[i].script )
       continue;
 
-    char plusminus = binds[i].press ? '+' : '-';
+    char plusminus[3] = "";
+    plusminus[0] = binds[i].press ? '+' : '-';
 
     const char *devname = "?";
     int device = MIN( INP_MAX, binds[i].device );
@@ -199,18 +191,22 @@ void mod_showbinds()
     char cbuf[10] = "badcmd";
     int cmd = binds[i].cmd;
     const char *cmdname = cbuf;
-    for(j=0; j<numinputnames; j++)
+    for(j=0; j<numinputnames && cmd; j++)
       if( inputnames[j].presscmd==cmd || inputnames[j].releasecmd==cmd )
         cmdname = inputnames[j].name;
+
+    if( binds[i].script ) {
+      plusminus[1] = '!';
+      cmdname = binds[i].script;
+    }
     if( !cmdname )
       sprintf(cbuf,"%d",cmd);
 
-    SJC_Write("bind %s%s %c%s",devname,symname,plusminus,cmdname);
+    SJC_Write("bind %s%s %s%s",devname,symname,plusminus,cmdname);
   }
 }
 
-
-void mod_keybind(int device,int sym,int press,char cmd)
+void mod_keybind(int device,int sym,int press,char cmd,char *script)
 {
   int i;
 
@@ -227,8 +223,9 @@ void mod_keybind(int device,int sym,int press,char cmd)
   binds[i].device = device;
   binds[i].press = press;
   binds[i].cmd = cmd;
+  safe_free(binds[i].script);
+  safe_copy(binds[i].script,script);
 }
-
 
 // returns 0 iff a command is created to be put on the network
 int mod_mkcmd(FCMD_t *c,int device,int sym,int press)
@@ -249,19 +246,21 @@ int mod_mkcmd(FCMD_t *c,int device,int sym,int press)
   for(i=0; i<binds_size; i++)
     if( binds[i].sym==sym && binds[i].device==device && binds[i].press==press ) {
       memset( c, 0, sizeof *c );
+
+      if( binds[i].script ) {
+        command( binds[i].script );
+        return -1;
+      }
+
       c->cmd = binds[i].cmd;
 
       if( !editmode )
-        return 0;
+        return c->cmd<=CMDT_1CON ? 0 : -1;
 
       if( c->cmd==CMDT_0EPREV || c->cmd==CMDT_0ENEXT ) //these shouldn't really happen and wouldn't mean anything
         return -1;
 
       if( c->cmd==CMDT_1EPREV ) { //select previous tile
-        v_fovy += 0.5f; //FIXME move somewhere else
-        if( v_fovy > 90.0f )
-          v_fovy = 90.0f;
-
         if( !spr_count ) return -1;
         myspr = (myspr + spr_count - 1) % spr_count;
         mytex = sprites[myspr].texnum;
@@ -269,10 +268,6 @@ int mod_mkcmd(FCMD_t *c,int device,int sym,int press)
       }
 
       if( c->cmd==CMDT_1ENEXT ) { //select next tile
-        v_fovy -= 0.5f; //FIXME move somewhere else
-        if( v_fovy < 0.1f )
-          v_fovy = 0.1f;
-
         if( !spr_count ) return -1;
         myspr = (myspr + 1) % spr_count;
         mytex = sprites[myspr].texnum;
@@ -325,7 +320,7 @@ int mod_mkcmd(FCMD_t *c,int device,int sym,int press)
 
         //map to game coordinates
         int tilex,tiley,tilez;
-        screen_unproject( i_mousex, i_mousey, co->y * co->bsy, &tilex, &tiley, &tilez );
+        screen_unproject( i_mousex, i_mousey, ylayer * co->bsy, &tilex, &tiley, &tilez );
 
         if( co->projection == DIMETRIC     ) tiley = ylayer;
         if( co->projection == ORTHOGRAPHIC ) tilez = ylayer;
@@ -357,15 +352,13 @@ int mod_mkcmd(FCMD_t *c,int device,int sym,int press)
   return -1;
 }
 
-
 int safe_atoi(const char *s)
 {
   if( !s ) return 0;
   return atoi(s);
 }
 
-
-int mod_command(char *q)
+int mod_command(char *q,char *args)
 {
   if( q==NULL ){
     ;
@@ -376,14 +369,14 @@ int mod_command(char *q)
     return 0;
 
   }else if( strcmp(q,"model")==0 ){
-    setmodel = safe_atoi(strtok(NULL," ")); // FIXME: lame hack
+    setmodel = safe_atoi(tok(args," ")); // FIXME: lame hack
     return 0;
 
   }else if( strcmp(q,"bounds")==0 || strcmp(q,"blocksize")==0 ){
     size_t n = 0;
-    int x = safe_atoi(strtok(NULL," "));
-    int y = safe_atoi(strtok(NULL," "));
-    int z = safe_atoi(strtok(NULL," "));
+    int x = safe_atoi(tok(args," "));
+    int y = safe_atoi(tok(args," "));
+    int z = safe_atoi(tok(args," "));
     char chr = strcmp(q,"bounds")==0 ? 'b' : 'z';
 
     if( !x || !y || !z ) {
@@ -408,8 +401,8 @@ int mod_command(char *q)
 
   }else if( strcmp(q,"tilespacing")==0 ){
     size_t n = 0;
-    int tileuw = safe_atoi(strtok(NULL," "));
-    int tileuh = safe_atoi(strtok(NULL," "));
+    int tileuw = safe_atoi(tok(args," "));
+    int tileuh = safe_atoi(tok(args," "));
 
     if( !tileuw || !tileuh ) {
       CONTEXT_t *co = fr[hotfr%maxframes].objs[mycontext].data;
@@ -437,9 +430,7 @@ int mod_command(char *q)
     magic_c.cmd = CMDT_0CON;
     putcmd(-1,-1,-1);
     return 0;
-  }else if( strcmp(q,"depth")==0 ){
-    m_showdepth = !m_showdepth;
-    return 0;
+
   }else if( strcmp(q,"resprite")==0 ){
     reload_sprites();
     renumber_sprites();
@@ -450,7 +441,6 @@ int mod_command(char *q)
 
   return 1;
 }
-
 
 void mod_loadsurfs(int quit)
 {
@@ -472,7 +462,6 @@ void mod_loadsurfs(int quit)
 
   SJglobfree( files );
 }
-
 
 void mod_predraw(Uint32 vidfr)
 {
@@ -498,7 +487,6 @@ void mod_predraw(Uint32 vidfr)
   }
 }
 
-
 void mod_draw(int objid,Uint32 vidfrmod,OBJ_t *o)
 {
   if( !fr[vidfrmod].objs[o->context].type ) {
@@ -518,12 +506,10 @@ void mod_draw(int objid,Uint32 vidfrmod,OBJ_t *o)
   }
 }
 
-
 void mod_huddraw(Uint32 vidfr)
 {
   // draw HUD here!
 }
-
 
 void mod_postdraw(Uint32 vidfr)
 {
@@ -536,7 +522,7 @@ void mod_postdraw(Uint32 vidfr)
 
   //map to game coordinates
   int upx,upy,upz;
-  screen_unproject( i_mousex, i_mousey, co->y * co->bsy, &upx, &upy, &upz );
+  screen_unproject( i_mousex, i_mousey, ylayer * co->bsy, &upx, &upy, &upz );
 
   int dnx = downx>=0 ? downx : upx;
   int dny = downy>=0 ? downy : upy;
@@ -576,9 +562,11 @@ void mod_postdraw(Uint32 vidfr)
     draw_sprite_on_tile( dspr, co, i, j, k );
   }
 
+  glDepthMask( GL_FALSE );
+  draw_guides(co,upx,upy,upz);
+  glDepthMask( GL_TRUE );
   glPopAttrib();
 }
-
 
 void mod_outerdraw(Uint32 vidfr,int w,int h)
 {
@@ -649,7 +637,6 @@ void mod_outerdraw(Uint32 vidfr,int w,int h)
   SJF_DrawText(i_mousex+7,i_mousey+15,SJF_LEFT,"%d",ylayer);
 }
 
-
 void mod_adv(int objid,Uint32 a,Uint32 b,OBJ_t *oa,OBJ_t *ob)
 {
   switch( ob->type ) {
@@ -693,33 +680,25 @@ static void screen_unproject( int screenx, int screeny, int height, int *x, int 
 {
   V ray = get_screen_ray(screenx,v_h-screeny);
 
-  *x = (int)ceilf( (v_eyex + (height-v_eyey) * ray.x / ray.y) / 24 );
-  *y = (int)0;
-  *z = (int)ceilf( (v_eyez + (height-v_eyey) * ray.z / ray.y) / 24 );
+  *x = (int)floorf( (v_eyex + (height-v_eyey) * ray.x / ray.y) / 24 );
+  *y = (int)ylayer;
+  *z = (int)floorf( (v_eyez + (height-v_eyey) * ray.z / ray.y) / 24 );
 }
 
 static void draw_sprite_on_tile( SPRITE_T *spr, CONTEXT_t *co, int x, int y, int z )
 {
-  if( co->projection == DIMETRIC )
-    y = y * co->bsy; // layers are all anchored at the bottom of the context
-
   if( !spr ) return;
   SJGL_SetTex( spr->texnum );
 
+  x = x * co->bsx + co->bsx/2;
+  y = y * co->bsy;
+  z = z * co->bsz + co->bsz/2;
+
   if( spr->flags&SPRF_FLOOR )
-    SJGL_Box3D( spr, x*24, y, z*24 );
+    SJGL_Box3D( spr, x, y, z );
   else
-    SJGL_Wall3D( spr, x*24, y, z*24 );
-
-  if( m_showdepth ) {
-    V screenpos = get_screen_pos(x,y,z);
-    glDisable(GL_DEPTH_TEST);
-    SJF_DrawText(screenpos.x, screenpos.y, SJF_LEFT, "%d%c", (int)screenpos.z, spr->flags&SPRF_FLOOR?'f':'\0');
-    glEnable(GL_DEPTH_TEST);
-    SJGL_SetTex(-1); // notify SJGL that the texture has changed
-  }
+    SJGL_Wall3D( spr, x, y, z );
 }
-
 
 static int sprite_at(int texnum, int x, int y)
 {
@@ -737,4 +716,3 @@ static int sprite_at(int texnum, int x, int y)
 
   return -1; 
 }
-

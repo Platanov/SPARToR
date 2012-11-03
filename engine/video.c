@@ -45,7 +45,7 @@ int v_targy      = 0;
 int v_targz      = 0;
 
 int v_eyedist    = 1;
-float v_fovy     = 60.0f;
+float v_fovy     = 20.0f;
 
 int v_w;
 int v_h;
@@ -103,7 +103,7 @@ void render()
   const SDL_VideoInfo *vidinfo;
   int x,y,w,h;
   int i;
-  Uint32 vidfr = (metafr-1);
+  Uint32 vidfr = metafr;
   Uint32 vidfrmod = vidfr%maxframes;
 
   Uint32 render_start = SDL_GetTicks();
@@ -155,7 +155,7 @@ void render()
   v_eyedist = sqrtf( 3*diagdist*diagdist );
 
   //glOrtho(0,NATIVEW,NATIVEH,0,NEARVAL,FARVAL);
-  gluPerspective(v_fovy,(GLdouble)NATIVEW/NATIVEH,10+v_eyedist,4000+v_eyedist*2);
+  gluPerspective(v_fovy,(GLdouble)NATIVEW/NATIVEH,v_eyedist,v_eyedist*2+4000);
 
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();

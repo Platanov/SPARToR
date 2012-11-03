@@ -71,40 +71,10 @@ int SJGL_BlitSkew(REC *s, int x, int y, int zlo, int zhi)
   int x2 = ( s->w > 0 ? x+s->w : x-s->w );
   int y2 = ( s->h > 0 ? y+s->h : y-s->h );
 
-  int rhi=0, ghi=0, bhi=0;
-  int rlo=0, glo=0, blo=0;
-
-  if( m_showdepth ) {
-    int grad;
-    int sect;
-
-    #define GET_COLOR(z,r,g,b)                                   \
-      grad = z + 512;                                            \
-      sect = (grad / 256 + 70) % 7;                              \
-      grad = grad % 256;                                         \
-                                                                 \
-      switch( sect ) {                                           \
-        case 0: r = grad;                                 break; \
-        case 1: r = 255;        b = grad;                 break; \
-        case 2: r = 255 - grad; b = 255;                  break; \
-        case 3:                 b = 255;        g = grad; break; \
-        case 4:                 b = 255 - grad; g = 255;  break; \
-        case 5: r = grad;                       g = 255;  break; \
-        case 6: r = 255;        b = grad;       g = 255;  break; \
-      }
-
-    GET_COLOR(zlo,rlo,glo,blo);
-    GET_COLOR(zhi,rhi,ghi,bhi);
-
-    glBindTexture(GL_TEXTURE_2D,0);
-  }
-
   glBegin(GL_QUADS);
 
-  if( m_showdepth ) glColor3ub(rhi,ghi,bhi);
   glTexCoord2i(s->x     , s->y     ); glVertex3i(x , y , zhi);
   glTexCoord2i(s->x+s->w, s->y     ); glVertex3i(x2, y , zhi);
-  if( m_showdepth ) glColor3ub(rlo,glo,blo);
   glTexCoord2i(s->x+s->w, s->y+s->h); glVertex3i(x2, y2, zlo);
   glTexCoord2i(s->x     , s->y+s->h); glVertex3i(x , y2, zlo);
 
@@ -116,6 +86,9 @@ int SJGL_BlitSkew(REC *s, int x, int y, int zlo, int zhi)
 int SJGL_Box3D(SPRITE_T *spr, int x, int y, int z)
 {
   y += spr->bump;
+
+  x += 12; // FIXME: hack for centering for now
+  z += 12;
 
   REC *s = &spr->rec;
   int x2 = x - 24;
@@ -134,20 +107,20 @@ int SJGL_Box3D(SPRITE_T *spr, int x, int y, int z)
   //    \ | /
   //      m
 
-  #define d_ glTexCoord2i(s->x     , s->y+12     ); glVertex3i(x2,y0,z );
+  #define d_ glTexCoord2i(s->x+s->w, s->y+12     ); glVertex3i(x2,y0,z );
   #define c_ glTexCoord2i(s->x+23  , s->y        ); glVertex3i(x2,y0,z2);
-  #define e_ glTexCoord2i(s->x+s->w, s->y+12     ); glVertex3i(x ,y0,z2);
+  #define e_ glTexCoord2i(s->x     , s->y+12     ); glVertex3i(x ,y0,z2);
   #define g_ glTexCoord2i(s->x+23  , syfl+24     ); glVertex3i(x ,y ,z );
-  #define b_ glTexCoord2i(s->x     , syfl+12     ); glVertex3i(x2,y ,z );
+  #define b_ glTexCoord2i(s->x+s->w, syfl+12     ); glVertex3i(x2,y ,z );
   #define a_ glTexCoord2i(s->x+23  , syfl        ); glVertex3i(x2,y ,z2);
-  #define f_ glTexCoord2i(s->x+s->w, syfl+12     ); glVertex3i(x ,y ,z2);
-  #define n_ glTexCoord2i(s->x+s->w, s->y+s->h-12); glVertex3i(x ,y2,z2);
+  #define f_ glTexCoord2i(s->x     , syfl+12     ); glVertex3i(x ,y ,z2);
+  #define n_ glTexCoord2i(s->x     , s->y+s->h-12); glVertex3i(x ,y2,z2);
   #define m_ glTexCoord2i(s->x+23  , s->y+s->h   ); glVertex3i(x ,y2,z );
-  #define k_ glTexCoord2i(s->x     , s->y+s->h-12); glVertex3i(x2,y2,z );
-  #define p_ glTexCoord2i(s->x     , s->y     ); glVertex3i(x2-12,y,z -12);
-  #define q_ glTexCoord2i(s->x+s->w, s->y     ); glVertex3i(x -12,y,z2-12);
-  #define s_ glTexCoord2i(s->x+s->w, s->y+s->h); glVertex3i(x +12,y,z -12);
-  #define r_ glTexCoord2i(s->x     , s->y+s->h); glVertex3i(x -12,y,z +12);
+  #define k_ glTexCoord2i(s->x+s->w, s->y+s->h-12); glVertex3i(x2,y2,z );
+  #define p_ glTexCoord2i(s->x+s->w, s->y     ); glVertex3i(x2-12,y,z -12);
+  #define q_ glTexCoord2i(s->x     , s->y     ); glVertex3i(x -12,y,z2-12);
+  #define s_ glTexCoord2i(s->x     , s->y+s->h); glVertex3i(x +12,y,z -12);
+  #define r_ glTexCoord2i(s->x+s->w, s->y+s->h); glVertex3i(x -12,y,z +12);
 
   // upper part
   glBegin(GL_TRIANGLE_FAN);
