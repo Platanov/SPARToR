@@ -1,0 +1,45 @@
+" vim: ft=help mouse=a ma noro lbr wrap nu tw=79 fo+=n fo-=croq
+
+------------------------------------------------------------------------------
+							     *index* *sjindex*
+SuperJer Notes Index ~
+
+Check out what we have for |breakfast|, it looks delicious!
+
+Well here are my notes. The best thing about notes is how they won't leave you
+to die in the middle of the street after breakfast.
+
+OK so let's say I'm writing a {really long} line that might just go on for a
+verrrrry, extremely, super-duper long and here's some more! Ah waaaan time I
+was a cobra Doughty! Now what the heck is goin on here? What do you think OK
+when you do it, you gotta do it about that? An new sentence goes here, for what
+it is worth! What if I go back and list these? 'wordiskisk'
+
+	1. What?
+	2. What what? What the what in the heck is going on with this crazy
+	   nonsensical garbage? Seriously.
+	3. Now what?
+	4. OK does it work now? I really do hope so. But I'm willing to live
+	   without it if I have to!
+	5. Ok let's do this. Now what?
+	6. That's what!
+
+	1. Roses are rose,
+	2. Roses are blue,
+	3. Roses are you,
+	4. Be at my place at ten.
+	5. What the hell do you want, when the hell do you want it, and why the 
+	   hell would you even want it in the first place?
+	6. Keep outta my shit!!
+	7. Well that's one way!
+
+And make lots of crazy changes to this whole paragraph? Will the formatting be
+east to fix or will it be a nightmare? This paragraph is where we are all at! 
+I'm not reall so sure, are you?  Are you, you little monkey?
+
+Is that all that takes? >
+
+     Is this really it?
+
+I guess that's it!
+

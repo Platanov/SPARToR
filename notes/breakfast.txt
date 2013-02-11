@@ -1,0 +1,16 @@
+" vim: ft=help mouse=a ma noro lbr wrap nu tw=79 fo+=n fo-=croq
+
+------------------------------------------------------------------------------
+						      *breakfast* *sjbreakfast*
+Breakfast! ~
+
+You'd better like breakfast! Man, I could go for some breakfast now.
+
+Woo, doggy, I'm hungry!
+
+Go back to the |index|?  Time for a list!
+	1. How about salmon?
+	2. How about veggies?
+	3. How about everything?
+
+Hot dog!!
