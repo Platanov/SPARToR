@@ -18,7 +18,7 @@
 #include "command.h"
 #include "client.h"
 #include "host.h"
-#include "net.h"
+#include "pack.h"
 
 
 UDPsocket clientsock = NULL;

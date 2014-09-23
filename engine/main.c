@@ -18,7 +18,7 @@
 #include "main.h"
 #include "font.h"
 #include "console.h"
-#include "net.h"
+#include "pack.h"
 #include "host.h"
 #include "client.h"
 #include "input.h"
@@ -67,7 +67,6 @@ int eng_realtime = 0;
 
 static const Uint32 sdlflags = SDL_INIT_TIMER|SDL_INIT_AUDIO|SDL_INIT_VIDEO|SDL_INIT_JOYSTICK;
 
-
 static void init_flexers()
 {
   memset(flexer,0,sizeof flexer);
@@ -78,7 +77,6 @@ static void init_flexers()
   #include "engine_structs.h"
   #include "game_structs.h"
 }
-
 
 int main(int argc,char **argv)
 {
@@ -120,24 +118,28 @@ int main(int argc,char **argv)
   //main loop
   for(;;) {
     newticks = SDL_GetTicks();
+
     if( !eng_realtime && newticks-ticks<5 ) // give system some time to breathe if we're not too busy
       SDL_Delay(1);
+
     ticks = newticks;
     metafr = ticks/ticksaframe + frameoffset;
+
     while( SDL_PollEvent(&event) ) switch(event.type) {
-      case SDL_VIDEOEXPOSE:                                                         break;
-      case SDL_VIDEORESIZE:     setvideosoon(event.resize.w,event.resize.h,0,10);   break;
-      case SDL_ACTIVEEVENT:     setactive(event.active.gain,event.active.state);    break;
-      case SDL_KEYDOWN:         kbinput(    1, event.key.keysym );                  break;
-      case SDL_KEYUP:           kbinput(    0, event.key.keysym );                  break;
-      case SDL_JOYBUTTONDOWN:   joyinput(   1, event.jbutton );                     break;
-      case SDL_JOYBUTTONUP:     joyinput(   0, event.jbutton );                     break;
-      case SDL_JOYAXISMOTION:   axisinput(     event.jaxis );                       break;
-      case SDL_MOUSEBUTTONDOWN: mouseinput( 1, event.button );                      break;
-      case SDL_MOUSEBUTTONUP:   mouseinput( 0, event.button );                      break;
-      case SDL_MOUSEMOTION:     mousemove(     event.motion );                      break;
-      case SDL_QUIT:            cleanup();                                          break;
+      case SDL_VIDEOEXPOSE:                                                       break;
+      case SDL_VIDEORESIZE:     setvideosoon(event.resize.w,event.resize.h,0,10); break;
+      case SDL_ACTIVEEVENT:     setactive(event.active.gain,event.active.state);  break;
+      case SDL_KEYDOWN:         kbinput   ( 1, event.key.keysym );                break;
+      case SDL_KEYUP:           kbinput   ( 0, event.key.keysym );                break;
+      case SDL_JOYBUTTONDOWN:   joyinput  ( 1, event.jbutton    );                break;
+      case SDL_JOYBUTTONUP:     joyinput  ( 0, event.jbutton    );                break;
+      case SDL_JOYAXISMOTION:   axisinput (    event.jaxis      );                break;
+      case SDL_MOUSEBUTTONDOWN: mouseinput( 1, event.button     );                break;
+      case SDL_MOUSEBUTTONUP:   mouseinput( 0, event.button     );                break;
+      case SDL_MOUSEMOTION:     mousemove (    event.motion     );                break;
+      case SDL_QUIT:            cleanup();                                        break;
     }
+
     idle_time += SDL_GetTicks() - idle_start;
     readinput();
     if(hostsock)   host();
@@ -147,7 +149,6 @@ int main(int argc,char **argv)
     idle_start = SDL_GetTicks();
   }
 }
-
 
 void toggleconsole()
 {
@@ -161,7 +162,6 @@ void toggleconsole()
     SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY,SDL_DEFAULT_REPEAT_INTERVAL);
   }
 }
-
 
 void advance()
 {
@@ -326,15 +326,16 @@ void advance()
     }
     Uint32 adv_game_start = SDL_GetTicks();
     adv_collide_time += adv_game_start - adv_collide_start;
-    for(i=0;i<maxobjs;i++) { //mod pass
+    for( i = 0; i < maxobjs; i++ ) //mod pass
+    {
       OBJ_t *oa = fr[a].objs+i;
       OBJ_t *ob = fr[b].objs+i;
       if(ob->type)
-        mod_adv(i,a,b,oa,ob);
+        mod_adv(i, a, b, oa, ob);
     }
     adv_game_time += SDL_GetTicks() - adv_game_start;
     adv_frames++;
-    setsurefr(hotfr>50 ? hotfr-50 : 0); //FIXME: UGLY HACK! surefr should be determined for REAL
+    setsurefr(hotfr > 50 ? hotfr - 50 : 0); //FIXME: UGLY HACK! surefr should be determined for REAL
   }
 
   gui_update(hotfr);
@@ -352,7 +353,8 @@ void cleanup()
   SDL_Quit();
   clearframebuffer();
 
-  for(i=0;i<maxframes;i++) {
+  for( i = 0; i < maxframes; i++ )
+  {
     free(fr[i].cmds);
     free(fr[i].objs);
   }
@@ -366,23 +368,25 @@ void cleanup()
 // frame is "free" as long as it was empty in the previous frame
 // staticly remembers which frames have already been given out this way
 // if a slot in the current frame is filled by other code it may be CORRUPTED BY USING THIS
-int findfreeslot(int frame1)
+int findfreeslot( int frame1 )
 {
   static int last_slot = 0;
   static int last_frame = 0;
-  int frame0 = (frame1>0)?(frame1-1):(maxframes-1);
+  int frame0 = (frame1 > 0) ? (frame1 - 1) : (maxframes - 1);
 
-  if( last_frame!=frame1 ) {
+  if( last_frame != frame1 )
+  {
     last_frame = frame1;
     last_slot = 1;
   }
 
-  if( frame1==-1 ) //exit early
+  if( frame1 == -1 ) //exit early
     return -1;
 
-  while(last_slot<maxobjs) {
-    if( fr[frame0].objs[last_slot].type==0 &&
-        fr[frame1].objs[last_slot].type==0 ) //empty
+  while( last_slot < maxobjs )
+  {
+    if( fr[frame0].objs[last_slot].type == 0 &&
+        fr[frame1].objs[last_slot].type == 0 ) //empty
       return last_slot++;
     last_slot++;
   }
@@ -393,48 +397,64 @@ int findfreeslot(int frame1)
 // clears all objects and commands out of frame buffer
 void clearframebuffer()
 {
-  int i,j;
+  int i, j;
 
-  for(i=0;i<maxframes;i++) {
+  for( i = 0; i < maxframes; i++ )
+  {
     fr[i].dirty = 0;
-    memset(fr[i].cmds,0,sizeof(FCMD_t)*maxclients);
+    memset(fr[i].cmds, 0, sizeof(FCMD_t) * maxclients);
 
-    for(j=0;j<maxobjs;j++) {
+    for( j = 0; j < maxobjs; j++ )
+    {
       if( fr[i].objs[j].data )
         free( fr[i].objs[j].data );
-      memset( fr[i].objs+j, 0, sizeof(OBJ_t) );
+
+      memset( fr[i].objs + j, 0, sizeof(OBJ_t) );
     }
   }
 }
 
-
-//frame setters
-void setmetafr( Uint32 to) {
+void setmetafr( Uint32 to )
+{
   metafr = to;
 }
-void setsurefr( Uint32 to) {
+
+void setsurefr( Uint32 to )
+{
   surefr = to;
 }
-void setdrawnfr(Uint32 to) {
+
+void setdrawnfr( Uint32 to )
+{
   drawnfr = to;
 }
-void sethotfr(  Uint32 to) {
+
+void sethotfr( Uint32 to )
+{
   hotfr = to;
 }
-void setcmdfr(  Uint32 to) {
-  while(cmdfr<to) {
+
+void setcmdfr( Uint32 to )
+{
+  while( cmdfr < to )
+  {
     cmdfr++;
-    memset(fr[cmdfr%maxframes].cmds,0,sizeof(FCMD_t)*maxclients);
+    memset(fr[cmdfr%maxframes].cmds, 0, sizeof(FCMD_t) * maxclients);
     fr[cmdfr%maxframes].dirty = 0;
   }
-  if(hotfr>=cmdfr)
+
+  if(hotfr >= cmdfr)
     hotfr = cmdfr-1;
-  if(surefr>=cmdfr)
+
+  if(surefr >= cmdfr)
     SJC_Write("*** DESYNC: cmdfr has been set = or before surefr! ***");
 }
-void jogframebuffer(Uint32  newmetafr,Uint32 newsurefr) {
+
+void jogframebuffer( Uint32 newmetafr, Uint32 newsurefr )
+{
   metafr = newmetafr;
   frameoffset = metafr - ticks/ticksaframe;
+
   surefr  = newsurefr;
   drawnfr = newsurefr;
   hotfr   = newsurefr;

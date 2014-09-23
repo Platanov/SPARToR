@@ -2,8 +2,8 @@
 // This is the header for all obj_*.c files
 //
 
-#ifndef DEADKING_OBJ_H_
-#define DEADKING_OBJ_H_
+#ifndef MOD_OBJ_H_
+#define MOD_OBJ_H_
 
 #include "mod.h"
 

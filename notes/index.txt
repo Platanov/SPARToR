@@ -1,45 +1,83 @@
 " vim: ft=help mouse=a ma noro lbr wrap nu tw=79 fo+=n fo-=croq
 
 ------------------------------------------------------------------------------
-							     *index* *sjindex*
-SuperJer Notes Index ~
+									 *index*
+SPARToR Engine Docs ~
 
-Check out what we have for |breakfast|, it looks delicious!
+The Frame Buffer ~
 
-Well here are my notes. The best thing about notes is how they won't leave you
-to die in the middle of the street after breakfast.
+The most important data in the engine is 'fr', the frame buffer. It contains
+360 frames.
 
-OK so let's say I'm writing a {really long} line that might just go on for a
-verrrrry, extremely, super-duper long and here's some more! Ah waaaan time I
-was a cobra Doughty! Now what the heck is goin on here? What do you think OK
-when you do it, you gotta do it about that? An new sentence goes here, for what
-it is worth! What if I go back and list these? 'wordiskisk'
+The frame type is FRAME_t. Each frame in 'fr' has:
+  .dirty       to indicate if the frame needs to be recalculated
+  .realfr      the unmodded sequential frame id number (unused)
+  .cmds        commands from each player, 1 per player per frame
+  .objs        all the objects in the frame
 
-	1. What?
-	2. What what? What the what in the heck is going on with this crazy
-	   nonsensical garbage? Seriously.
-	3. Now what?
-	4. OK does it work now? I really do hope so. But I'm willing to live
-	   without it if I have to!
-	5. Ok let's do this. Now what?
-	6. That's what!
+Commands use FCMD_t and have:
+  .cmd         numeric id of the command, e.g. jump, +attack
+  .mousehi     high order bits for mouse position
+  .mousex      mouse x pos
+  .mousey      mouse y pos
+  .flags
+    CMDF_NEW   set on new client connect
+    CMDF_QUIT  disconnect
+    CMDF_DATA  command has arbitrary data attached
+  .datasz      size of extra data for the command
+  .data        arbitrary data, e.g. chat message or copy-paste buffer
 
-	1. Roses are rose,
-	2. Roses are blue,
-	3. Roses are you,
-	4. Be at my place at ten.
-	5. What the hell do you want, when the hell do you want it, and why the 
-	   hell would you even want it in the first place?
-	6. Keep outta my shit!!
-	7. Well that's one way!
+Objects use OBJ_t and have:
+  type         numeric id for type of the object (items, monsters, etc)
+  flags
+    OBJF_POS   indicates that the object has a position
+    OBJF_VEL   has a velocity
+    OBJF_VIS   is visible
+    OBJF_HULL  has a hull (physical size)
+    OBJF_CLIP  clips with solids
+    OBJF_PLAT  is a platform
+    OBJF_PVEL  has a player-controlled velocity
+    OBJF_DEL   marked for deletion
+    OBJF_BND[XZTB] clips with context boundaries X, Z, top, bottom
+    OBJF_REFC  has a refcount
+  context      which context the object belongs to, e.g. which level or world
+  size         size of the data segment
+  data         arbitrary data -- see flexers
 
-And make lots of crazy changes to this whole paragraph? Will the formatting be
-east to fix or will it be a nightmare? This paragraph is where we are all at! 
-I'm not reall so sure, are you?  Are you, you little monkey?
+Main Loop ~
 
-Is that all that takes? >
+Here's what happens each loop. Note that multiple frames or no frames may be
+processed per loop. Each loop does not mean each frame. Not even close.
 
-     Is this really it?
+1. Every main loop, ticks are counted and the current meta-frame (metafr) is
+   determined. The metafr matches the wall time.
 
-I guess that's it!
+2. Then we check for events, e.g. window-focus, resizing or input. Input can be
+   from keyboards, mice, joysticks.
 
+3. Inputs that are not intercepted (fullscreen toggle, console, quit, kwikbind,
+   etc) are buffered by putcmd(). putcmd() stores a simple list of input
+   commands that are written to the .cmds of the frame later FIFO. See
+   getnextcmd().
+
+4. Idle time is counted here. This is to keep track of how much CPU time is NOT
+   being used by the game. This works as long as input-handling code is very
+   fast (it is).
+
+5. Now we read the input we buffered and stick it into the frames .cmds list.
+   This dirties the frame after hotfr. See advance().
+
+6. Network stuff happens here. If we are a host or a client. See below.
+
+7. Frame processing happens here, using advance(). Frames from hotfr up to
+   metafr are recalculated. First the engine does basic movement and clipping,
+   then the mod does whatever it needs to do.
+
+8. Rendering. See render(). Boring.
+
+Networking for Host ~
+
+TODOS:
+Packet too old or new: notify client by sending blank cmd back (or whatever cmd is appropriate)
+
+Networking for Client ~

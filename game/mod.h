@@ -1,6 +1,6 @@
 
-#ifndef DEADKING_MOD_H_
-#define DEADKING_MOD_H_
+#ifndef MOD_H_
+#define MOD_H_
 
 
 #include <GL/glew.h>
@@ -9,7 +9,7 @@
 #include "mod_constants.h"
 #include "main.h"
 #include "console.h"
-#include "net.h"
+#include "pack.h"
 #include "video.h"
 #include "input.h"
 #include "patt.h"

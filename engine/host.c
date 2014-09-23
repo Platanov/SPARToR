@@ -10,7 +10,6 @@
  **  http://github.com/superjer/SPARToR
  **/
 
-
 #include "SDL.h"
 #include "SDL_net.h"
 #include "mod.h"
@@ -19,21 +18,34 @@
 #include "command.h"
 #include "host.h"
 #include "client.h"
-#include "net.h"
-
+#include "pack.h"
 
 UDPsocket hostsock = NULL;
-
 
 static CLIENT_t *clients;
 static UDPpacket *pkt;
 
+void host_start(int port)
+{
+  if( !port )
+    port=HOSTPORT;
 
-void host_start(int port) {
-  if(!port) port=HOSTPORT;
-  if( hostsock ) { SJC_Write("Already running as a host. Type disconnect to stop."); return; }
-  if( clientsock ) { SJC_Write("Already connected to a host. Type disconnect if that ain't cool."); return; }
-  if( !(hostsock = SDLNet_UDP_Open(port)) ) { SJC_Write("Error: Could not open host socket!"); SJC_Write(SDL_GetError()); return; }
+  if( hostsock ) {
+    SJC_Write("Already running as a host. Type disconnect to stop.");
+    return;
+  }
+
+  if( clientsock ) {
+    SJC_Write("Already connected to a host. Type disconnect if that ain't cool.");
+    return;
+  }
+
+  if( !(hostsock = SDLNet_UDP_Open(port)) ) {
+    SJC_Write("Error: Could not open host socket!");
+    SJC_Write(SDL_GetError());
+    return;
+  }
+
   clients = calloc(maxclients,sizeof(CLIENT_t));
   me = 0;
   clients[me].connected = 1;
@@ -42,16 +54,16 @@ void host_start(int port) {
   pkt = SDLNet_AllocPacket(PACKET_SIZE);
 }
 
-
-void host_stop() {
+void host_stop()
+{
   free(clients);
   SDLNet_FreePacket(pkt);
   SDLNet_UDP_Close(hostsock);
   hostsock = NULL;
 }
 
-
-void host() {
+void host()
+{
   int status;
   int i;
   Uint32 u;
@@ -64,58 +76,75 @@ void host() {
   //recv from clients
   for(;;) {
     status = SDLNet_UDP_Recv(hostsock,pkt);
-    if( status==-1 ) {
+
+    if( status == -1 ) {
       SJC_Write("Network Error: Recv failed!");
       SJC_Write(SDL_GetError());
     }
-    if( status!=1 )
+
+    if( status != 1 )
       break;
-    for(i=0;i<maxclients;i++)
-      if(clients[i].connected &&
-         clients[i].addr.host==pkt->address.host &&
-         clients[i].addr.port==pkt->address.port)
+
+    for( i = 0; i < maxclients; i++ )
+      if( clients[i].connected &&
+          clients[i].addr.host == pkt->address.host &&
+          clients[i].addr.port == pkt->address.port )
         break;
-    if(i==maxclients) //a new client is connecting?
+
+    if( i == maxclients ) { //a new client is connecting?
       host_welcome();
-    else switch(pkt->data[0]) { //clients[i] has something to say!
+    } else switch( pkt->data[0] ) { //clients[i] has something to say!
       case 'm': //message
-        SJC_Write("Client %d says: %.*s",i,pkt->len,pkt->data);
+        SJC_Write("Client %d says: %.*s", i, pkt->len, pkt->data);
         break;
+
       case 'c': //cmd update
         n = 1;
-        pktnum = unpackbytes(pkt->data,pkt->len,&n,4); //FIXME: do something with this!
-SJC_Write("Miracle! Packet number %d received from client %d",pktnum,i);
-        packfr = unpackbytes(pkt->data,pkt->len,&n,4);
-        if( packfr<metafr-30 ) {
-          SJC_Write("Ignoring too old cmd from client %d",i);
+        pktnum = unpackbytes( pkt->data, pkt->len, &n, 4 ); //FIXME: do something with this!
+        packfr = unpackbytes( pkt->data, pkt->len, &n, 4 );
+        SJC_Write("Packet number %d received from client %d (hotfr=%d, packfr=%d)", pktnum, i, hotfr, packfr);
+
+        if( packfr < metafr - 30 ) {
+          SJC_Write("Ignoring too old cmd from client %d", i);
           break;
         }
-        if( packfr>metafr+10 ) {
-          SJC_Write("Ignoring too new cmd from client %d",i);
+
+        if( packfr > metafr + 10 ) {
+          SJC_Write("Ignoring too new cmd from client %d", i);
           break;
         }
+
         setcmdfr(packfr);
-        if( hotfr>packfr-1 )
+
+        if( hotfr > packfr-1 )
           sethotfr(packfr-1);
+
         fr[packfr%maxframes].dirty = 1;
-        pcmd = fr[packfr%maxframes].cmds+i;
-        pcmd->cmd     = unpackbytes(pkt->data,pkt->len,&n,1);
-        pcmd->mousehi = unpackbytes(pkt->data,pkt->len,&n,1);
-        pcmd->mousex  = unpackbytes(pkt->data,pkt->len,&n,1);
-        pcmd->mousey  = unpackbytes(pkt->data,pkt->len,&n,1);
-        pcmd->flags   = unpackbytes(pkt->data,pkt->len,&n,2);
-        if( pcmd->flags & CMDF_DATA ) { //check for variable data
-          pcmd->datasz = unpackbytes(pkt->data,pkt->len,&n,2);
-          if( pcmd->datasz > sizeof pcmd->data ) {
-            SJC_Write("Treachery: datasz too large (%d) from client %d",pcmd->datasz,i);
+        pcmd = fr[packfr%maxframes].cmds + i;
+        pcmd->cmd     = unpackbytes(pkt->data, pkt->len, &n, 1);
+        pcmd->mousehi = unpackbytes(pkt->data, pkt->len, &n, 1);
+        pcmd->mousex  = unpackbytes(pkt->data, pkt->len, &n, 1);
+        pcmd->mousey  = unpackbytes(pkt->data, pkt->len, &n, 1);
+        pcmd->flags   = unpackbytes(pkt->data, pkt->len, &n, 2);
+
+        if( pcmd->flags & CMDF_DATA ) //check for variable data
+        {
+          pcmd->datasz = unpackbytes(pkt->data, pkt->len, &n, 2);
+
+          if( pcmd->datasz > sizeof pcmd->data )
+          {
+            SJC_Write("Treachery: datasz too large (%d) from client %d", pcmd->datasz, i);
             break;
           }
-          memcpy( pcmd->data, pkt->data+n, pcmd->datasz );
+
+          memcpy( pcmd->data, pkt->data + n, pcmd->datasz );
           n += pcmd->datasz;
         }
+
         break;
+
       default:
-        SJC_Write("Client %d sent mysterious, incomprehensible packet",i);
+        SJC_Write("Client %d sent mysterious, incomprehensible packet \"%c\"", i, pkt->data[0] );
         break;
     }
   }
@@ -124,26 +153,37 @@ SJC_Write("Miracle! Packet number %d received from client %d",pktnum,i);
   pkt->data[0] = 'C';
   pkt->data[1] = 0;
   pkt->len = 2;
-  for(u=surefr+1;u<=cmdfr;u++) { //scan for dirty frames to send
-    if( fr[u%maxframes].dirty ) {
+
+  for( u = surefr+1; u <= cmdfr; u++ ) //scan for dirty frames to send
+  {
+    if( fr[u%maxframes].dirty )
+    {
       data = packframecmds(u,&n);
-      if( pkt->len+4+n >= 500 /*pkt->maxlen*/ || pkt->data[1]>100 ) { //FIXME: use a smaller pkt->maxlen
-        SJC_Write("%u: Packed too many cmds! Will get the rest next frame...",hotfr);
+
+      if( pkt->len + 4 + n >= 500 /*pkt->maxlen*/ || pkt->data[1] > 100 ) //FIXME: use a smaller pkt->maxlen
+      {
+        SJC_Write("%u: Packed too many cmds! Will get the rest next frame...", hotfr);
         free(data);
         break;
       }
-      packbytes(pkt->data+pkt->len,u,NULL,4);
-      memcpy(pkt->data+pkt->len+4, data, n);
+
+      packbytes(pkt->data + pkt->len, u, NULL, 4);
+      memcpy(pkt->data + pkt->len+4, data, n);
       free(data);
-      pkt->len += 4+n;
+      pkt->len += 4 + n;
       pkt->data[1]++;
       fr[u%maxframes].dirty = 0;
     }
   }
-  if( pkt->data[1]>0 ) { //we have packed cmds to send along!
-    for(i=0;i<maxclients;i++) {
+
+  if( pkt->data[1] > 0 ) //we have packed cmds to send along!
+  {
+    for( i = 0; i < maxclients; i++ )
+    {
       pkt->address = clients[i].addr;
-      if( clients[i].connected && pkt->address.host && !SDLNet_UDP_Send(hostsock,-1,pkt) ) {
+
+      if( clients[i].connected && pkt->address.host && !SDLNet_UDP_Send(hostsock, -1, pkt) )
+      {
         SJC_Write("Error: Could not send cmds packet!");
         SJC_Write(SDL_GetError());
       }
@@ -153,7 +193,8 @@ SJC_Write("Miracle! Packet number %d received from client %d",pktnum,i);
 
 
 //accept a new client and store the "connection"
-void host_welcome() {
+void host_welcome()
+{
   int    i;
   Uint32 u;
   size_t n;
@@ -220,5 +261,3 @@ void host_welcome() {
 
   //TODO: lots
 }
-
-

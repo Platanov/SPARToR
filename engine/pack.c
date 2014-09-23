@@ -17,7 +17,7 @@
 #include "main.h"
 #include "console.h"
 #include "command.h"
-#include "net.h"
+#include "pack.h"
 
 
 Uint8 *packframe(Uint32 packfr,size_t *n) {

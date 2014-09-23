@@ -18,7 +18,7 @@
 #include "main.h"
 #include "console.h"
 #include "command.h"
-#include "net.h"
+#include "pack.h"
 #include "host.h"
 #include "client.h"
 #include "video.h"
