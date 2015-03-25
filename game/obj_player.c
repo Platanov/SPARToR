@@ -89,11 +89,14 @@ void obj_player_adv( int objid, Uint32 a, Uint32 b, OBJ_t *oa, OBJ_t *ob )
     return;
   }
 
-  gh->vel.x = newme->pos.x - gh->pos.x; //put ghost in the right spot
-  gh->vel.y = newme->pos.y - gh->pos.y;
-  gh->vel.z = newme->pos.z - gh->pos.z;
+  gh->pos.x = newme->pos.x; //put ghost in the right spot
+  gh->pos.y = newme->pos.y;
+  gh->pos.z = newme->pos.z;
+  gh->vel.x = 0;
+  gh->vel.y = 0;
+  gh->vel.z = 0;
 
-  if( ((GHOST_t *)fr[b].objs[newme->ghost].data)->client==me ) { //local client match
+  if( gh->client==me ) { //local client match
     v_camx = gh->pos.x;
     v_camy = gh->pos.y;
     if( setmodel>-1 ) { //FIXME -- just for fun, will not sync!
@@ -227,6 +230,7 @@ void obj_player_adv( int objid, Uint32 a, Uint32 b, OBJ_t *oa, OBJ_t *ob )
     if(fr[b].objs[i].type==OBJT_PLAYER) {
       PLAYER_t *oldyou = fr[a].objs[i].data;
       PLAYER_t *newyou = fr[b].objs[i].data;
+
       if(    !oldyou
           || fabsf(newme->pos.x - newyou->pos.x)>5.0f //we're not on top of each other
           || fabsf(newme->pos.z - newyou->pos.z)>5.0f
@@ -234,6 +238,7 @@ void obj_player_adv( int objid, Uint32 a, Uint32 b, OBJ_t *oa, OBJ_t *ob )
           || newme->goingr  ||  newme->goingl         //or we're moving
           || newyou->goingr || newyou->goingl         )
         continue;
+
       if(newme->pos.x < newyou->pos.x) {
         newme->pvel.x  -= 0.2f;
         newyou->pvel.x += 0.2f;
@@ -245,8 +250,9 @@ void obj_player_adv( int objid, Uint32 a, Uint32 b, OBJ_t *oa, OBJ_t *ob )
 
   if( newme->hovertime ) { //gravity?
     newme->hovertime--;
-    newme->vel.y += 0.3f;
-  } else
-    newme->vel.y += newme->hovertime ? 0.3f : 0.7f;
+    newme->vel.y += 0.1f;
+  } else {
+    newme->vel.y += 0.7f;
+  }
 }
 
