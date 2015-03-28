@@ -19,6 +19,7 @@
 #include "font.h"
 #include "console.h"
 #include "pack.h"
+#include "net.h"
 #include "host.h"
 #include "client.h"
 #include "input.h"
@@ -27,6 +28,7 @@
 #include "gui.h"
 #include "sprite.h"
 #include "sprite_helpers.h"
+#include "command.h"
 #include <math.h>
 
 #if (SDL_IMAGE_MAJOR_VERSION*1000000 + SDL_IMAGE_MINOR_VERSION*1000 + SDL_IMAGE_PATCHLEVEL)<1002008 //support SDL_image pre 1.2.8
@@ -66,6 +68,8 @@ Uint32 adv_frames = 0;
 int eng_realtime = 0;
 
 static const Uint32 sdlflags = SDL_INIT_TIMER|SDL_INIT_AUDIO|SDL_INIT_VIDEO|SDL_INIT_JOYSTICK;
+
+static void args(int argc,char **argv);
 
 static void init_flexers()
 {
@@ -108,12 +112,14 @@ int main(int argc,char **argv)
   SJC_Write(" --->  \\#F80Type 'help' for help.\\#FFF  <---");
   SJC_Write("");
 
-  toggleconsole();
+  //toggleconsole();
   videoinit();
   inputinit();
   audioinit();
-
   mod_setup(0);
+  args(argc, argv);
+
+  setwinpos(200,200);
 
   //main loop
   for(;;) {
@@ -142,11 +148,25 @@ int main(int argc,char **argv)
 
     idle_time += SDL_GetTicks() - idle_start;
     readinput();
-    if(hostsock)   host();
-    if(clientsock) client();
+    net_loop();
     advance();
     render();
     idle_start = SDL_GetTicks();
+  }
+}
+
+static void args(int argc,char **argv)
+{
+  int i;
+  for( i=1; i<argc; i++ )
+  {
+    char *p = argv[i];
+    while( *p )
+    {
+      if( *p == '_' ) *p = ' ';
+      p++;
+    }
+    command(argv[i]);
   }
 }
 
@@ -347,6 +367,7 @@ void cleanup()
   int i;
 
   audiodestroy();
+  net_stop();
 
   IMG_Quit();
   SDLNet_Quit();
@@ -438,6 +459,9 @@ void setcmdfr( Uint32 to )
 {
   while( cmdfr < to )
   {
+
+void setcmdfr(  Uint32 to) {
+  while(cmdfr<to) {
     cmdfr++;
     memset(fr[cmdfr%maxframes].cmds, 0, sizeof(FCMD_t) * maxclients);
     fr[cmdfr%maxframes].dirty = 0;
@@ -460,5 +484,3 @@ void jogframebuffer( Uint32 newmetafr, Uint32 newsurefr )
   hotfr   = newsurefr;
   cmdfr   = newsurefr;
 }
-
-
