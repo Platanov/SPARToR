@@ -90,12 +90,12 @@ SJC_Write("Miracle! Packet number %d received from client %d",pktnum,i);
           SJC_Write("Ignoring too old cmd from client %d",i);
           break;
         }
-        if( packfr>metafr+10 ) {
+        if( packfr>metafr+10 ) { // check for ring buffer safety!
           SJC_Write("Ignoring too new cmd from client %d",i);
           break;
         }
-        setcmdfr(packfr);
-        if( hotfr>packfr-1 )
+        setcmdfr(packfr); // this can NOT be right!!!!!
+        if( hotfr>packfr-1 ) // this either!!!
           sethotfr(packfr-1);
         fr[packfr%maxframes].dirty = 1;
         pcmd = fr[packfr%maxframes].cmds+i;
@@ -153,7 +153,8 @@ SJC_Write("Miracle! Packet number %d received from client %d",pktnum,i);
 
 
 //accept a new client and store the "connection"
-void host_welcome() {
+void host_welcome()
+{
   int    i;
   Uint32 u;
   size_t n;

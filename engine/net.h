@@ -7,6 +7,7 @@
 #define HOSTPORT 31103
 #define CLIENTPORT 31109
 #define PACKET_SIZE 5000
+#define MAX_PORTWALK 4
 
 
 Uint8 *packframe(      Uint32 packfr,size_t *n);
