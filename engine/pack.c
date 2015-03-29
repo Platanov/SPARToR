@@ -1,5 +1,5 @@
 /**
- **  SPARToR 
+ **  SPARToR
  **  Network Game Engine
  **  Copyright (C) 2010-2012  Jer Wilson
  **
@@ -17,8 +17,10 @@
 #include "main.h"
 #include "console.h"
 #include "command.h"
-#include "net.h"
+#include "pack.h"
 
+Uint8 outbox[OUTBOX_LEN];
+size_t outbox_len;
 
 Uint8 *packframe(Uint32 packfr,size_t *n) {
   FRAME_t *pfr = fr + packfr % maxframes;

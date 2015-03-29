@@ -18,7 +18,7 @@
 #include "main.h"
 #include "font.h"
 #include "console.h"
-#include "net.h"
+#include "pack.h"
 #include "host.h"
 #include "client.h"
 #include "input.h"
