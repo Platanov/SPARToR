@@ -53,13 +53,15 @@ void sprblit( SPRITE_T *spr, int x, int y )
 {
   if( !spr ) return;
 
-  int zlo = /*DEPTH_OF(y) +*/ spr->bump;
+  int zlo = /*DEPTH_OF(y) +*/ spr->bump + y;
   int zhi;
 
   if( spr->flags & SPRF_FLOOR )
     zhi = zlo - spr->rec.h;
   else
     zhi = zlo + spr->rec.h;
+
+  zhi = zlo;
 
   SJGL_SetTex( spr->texnum );
   SJGL_BlitSkew( &spr->rec, x-spr->ancx, y-spr->ancy, zlo, zhi );

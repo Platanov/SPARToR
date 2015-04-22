@@ -479,9 +479,6 @@ void setcmdfr( Uint32 to )
 {
   while( cmdfr < to )
   {
-
-void setcmdfr(  Uint32 to) {
-  while(cmdfr<to) {
     cmdfr++;
     memset(fr[cmdfr%maxframes].cmds, 0, sizeof(FCMD_t) * maxclients);
     fr[cmdfr%maxframes].dirty = 0;

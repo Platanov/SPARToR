@@ -24,7 +24,6 @@
 #include "client.h"
 #include "host.h"
 #include "pack.h"
-#include "net.h"
 
 static Uint32 pktnum;
 static Uint32 sentfr = 0;
